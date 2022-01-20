@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# pylint: disable=missing-class-docstring,disable=no-self-use
 import os
 import logging
 import time

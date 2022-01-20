@@ -1,3 +1,4 @@
+# pylint: disable=missing-class-docstring,disable=no-self-use
 import re
 import os
 import unittest
@@ -13,7 +14,7 @@ class TestDecompiler(unittest.TestCase):
         p = angr.Project(bin_path, auto_load_libs=False, load_debug_info=True)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
-        for f in cfg.functions.values(self):
+        for f in cfg.functions.values():
             if f.is_simprocedure:
                 print("Skipping SimProcedure %s." % repr(f))
                 continue
