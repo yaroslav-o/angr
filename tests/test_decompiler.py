@@ -5,7 +5,9 @@ import unittest
 
 import angr
 
-test_location = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', 'binaries', 'tests')
+test_location = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "..", "..", "binaries", "tests"
+)
 
 
 class TestDecompiler(unittest.TestCase):
@@ -25,7 +27,9 @@ class TestDecompiler(unittest.TestCase):
                 print("Failed to decompile function %s." % repr(f))
 
     def test_decompiling_babypwn_i386(self):
-        bin_path = os.path.join(test_location, "i386", "decompiler", "codegate2017_babypwn")
+        bin_path = os.path.join(
+            test_location, "i386", "decompiler", "codegate2017_babypwn"
+        )
         p = angr.Project(bin_path, auto_load_libs=False, load_debug_info=True)
 
         cfg = p.analyses.CFG(normalize=True, data_references=True)
@@ -33,7 +37,7 @@ class TestDecompiler(unittest.TestCase):
             if f.is_simprocedure:
                 print("Skipping SimProcedure %s." % repr(f))
                 continue
-            if f.addr not in (0x8048a71, 0x8048c6b):
+            if f.addr not in (0x8048A71, 0x8048C6B):
                 continue
             dec = p.analyses.Decompiler(f, cfg=cfg.model)
             if dec.codegen is not None:
@@ -46,7 +50,7 @@ class TestDecompiler(unittest.TestCase):
         p = angr.Project(bin_path, auto_load_libs=False, load_debug_info=True)
 
         cfg = p.analyses.CFG(normalize=True, data_references=True)
-        f = cfg.functions['loop']
+        f = cfg.functions["loop"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         if dec.codegen is not None:
 
@@ -63,7 +67,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
 
-        f = cfg.functions['main']
+        f = cfg.functions["main"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         if dec.codegen is not None:
             print(dec.codegen.text)
@@ -76,11 +80,13 @@ class TestDecompiler(unittest.TestCase):
         bin_path = os.path.join(test_location, "armel", "aes")
         # TODO: FIXME: EDG says: This binary is actually CortexM
         # It is incorrectly linked. We override this here
-        p = angr.Project(bin_path, arch='ARMEL', auto_load_libs=False, load_debug_info=True)
+        p = angr.Project(
+            bin_path, arch="ARMEL", auto_load_libs=False, load_debug_info=True
+        )
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
 
-        f = cfg.functions['main']
+        f = cfg.functions["main"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         if dec.codegen is not None:
             print(dec.codegen.text)
@@ -93,7 +99,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(collect_data_references=True, normalize=True)
 
-        f = cfg.functions['main']
+        f = cfg.functions["main"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         if dec.codegen is not None:
             print(dec.codegen.text)
@@ -106,7 +112,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
-        f = cfg.functions['sum']
+        f = cfg.functions["sum"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         if dec.codegen is not None:
             print(dec.codegen.text)
@@ -120,7 +126,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(normalize=True)
 
-        f = cfg.functions['free_ent']
+        f = cfg.functions["free_ent"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         if dec.codegen is not None:
             print(dec.codegen.text)
@@ -136,7 +142,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(normalize=True)
 
-        f = cfg.functions['main']
+        f = cfg.functions["main"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         if dec.codegen is not None:
             print(dec.codegen.text)
@@ -150,7 +156,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(normalize=True)
 
-        f = cfg.functions['emit_ancillary_info']
+        f = cfg.functions["emit_ancillary_info"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         if dec.codegen is not None:
             print(dec.codegen.text)
@@ -165,7 +171,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
-        f = cfg.functions['main']
+        f = cfg.functions["main"]
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
 
         if dec.codegen is not None:
@@ -193,13 +199,20 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
         # disable eager returns simplifier
-        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes("AMD64",
-                                                                                                               "linux")
-        all_optimization_passes = [p for p in all_optimization_passes
-                                   if p is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier]
+        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes(
+            "AMD64", "linux"
+        )
+        all_optimization_passes = [
+            p
+            for p in all_optimization_passes
+            if p
+            is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier
+        ]
 
-        f = cfg.functions['main']
-        dec = p.analyses.Decompiler(f, cfg=cfg.model, optimization_passes=all_optimization_passes)
+        f = cfg.functions["main"]
+        dec = p.analyses.Decompiler(
+            f, cfg=cfg.model, optimization_passes=all_optimization_passes
+        )
         if dec.codegen is not None:
             code = dec.codegen.text
             assert "switch" in code
@@ -226,13 +239,20 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
         # disable eager returns simplifier
-        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes("AMD64",
-                                                                                                               "linux")
-        all_optimization_passes = [p for p in all_optimization_passes
-                                   if p is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier]
+        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes(
+            "AMD64", "linux"
+        )
+        all_optimization_passes = [
+            p
+            for p in all_optimization_passes
+            if p
+            is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier
+        ]
 
-        f = cfg.functions['main']
-        dec = p.analyses.Decompiler(f, cfg=cfg.model, optimization_passes=all_optimization_passes)
+        f = cfg.functions["main"]
+        dec = p.analyses.Decompiler(
+            f, cfg=cfg.model, optimization_passes=all_optimization_passes
+        )
         if dec.codegen is not None:
             code = dec.codegen.text
             assert "switch" in code
@@ -264,13 +284,20 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
         # disable eager returns simplifier
-        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes("AMD64",
-                                                                                                               "linux")
-        all_optimization_passes = [p for p in all_optimization_passes
-                                   if p is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier]
+        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes(
+            "AMD64", "linux"
+        )
+        all_optimization_passes = [
+            p
+            for p in all_optimization_passes
+            if p
+            is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier
+        ]
 
-        f = cfg.functions[0x4048c0]
-        dec = p.analyses.Decompiler(f, cfg=cfg.model, optimization_passes=all_optimization_passes)
+        f = cfg.functions[0x4048C0]
+        dec = p.analyses.Decompiler(
+            f, cfg=cfg.model, optimization_passes=all_optimization_passes
+        )
         print(dec.codegen.text)
         if dec.codegen is not None:
             code = dec.codegen.text
@@ -287,19 +314,30 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
         # disable eager returns simplifier
-        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes("AMD64",
-                                                                                                               "linux")
-        all_optimization_passes = [p for p in all_optimization_passes
-                                   if p is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier]
+        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes(
+            "AMD64", "linux"
+        )
+        all_optimization_passes = [
+            p
+            for p in all_optimization_passes
+            if p
+            is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier
+        ]
 
-        f = cfg.functions[0x404dc0]
-        dec = p.analyses.Decompiler(f, cfg=cfg.model, optimization_passes=all_optimization_passes)
+        f = cfg.functions[0x404DC0]
+        dec = p.analyses.Decompiler(
+            f, cfg=cfg.model, optimization_passes=all_optimization_passes
+        )
         print(dec.codegen.text)
         code: str = dec.codegen.text
 
         # constant propagation was failing. see https://github.com/angr/angr/issues/2659
-        assert code.count("32 <=") == 0 and code.count("32 >") == 0 and \
-               code.count("((int)32) <=") == 0 and code.count("((int)32) >") == 0
+        assert (
+            code.count("32 <=") == 0
+            and code.count("32 >") == 0
+            and code.count("((int)32) <=") == 0
+            and code.count("((int)32) >") == 0
+        )
         if "*(&stack_base-56:32)" in code:
             assert code.count("32") == 3
         else:
@@ -312,13 +350,20 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
         # disable eager returns simplifier
-        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes("AMD64",
-                                                                                                               "linux")
-        all_optimization_passes = [p for p in all_optimization_passes
-                                   if p is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier]
+        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes(
+            "AMD64", "linux"
+        )
+        all_optimization_passes = [
+            p
+            for p in all_optimization_passes
+            if p
+            is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier
+        ]
 
-        f = cfg.functions[0x401e60]
-        dec = p.analyses.Decompiler(f, cfg=cfg.model, optimization_passes=all_optimization_passes)
+        f = cfg.functions[0x401E60]
+        dec = p.analyses.Decompiler(
+            f, cfg=cfg.model, optimization_passes=all_optimization_passes
+        )
         print(dec.codegen.text)
 
     def test_decompiling_true_a_x86_64_1(self):
@@ -329,13 +374,20 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
         # disable eager returns simplifier
-        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes("AMD64",
-                                                                                                               "linux")
-        all_optimization_passes = [p for p in all_optimization_passes
-                                   if p is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier]
+        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes(
+            "AMD64", "linux"
+        )
+        all_optimization_passes = [
+            p
+            for p in all_optimization_passes
+            if p
+            is not angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier
+        ]
 
         f = cfg.functions[0x404410]
-        dec = p.analyses.Decompiler(f, cfg=cfg.model, optimization_passes=all_optimization_passes)
+        dec = p.analyses.Decompiler(
+            f, cfg=cfg.model, optimization_passes=all_optimization_passes
+        )
         print(dec.codegen.text)
 
     def test_decompiling_true_1804_x86_64(self):
@@ -359,7 +411,7 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(normalize=True, data_references=True)
 
         # verify_password
-        f = cfg.functions['verify_password']
+        f = cfg.functions["verify_password"]
         # recover calling convention
         p.analyses.VariableRecoveryFast(f)
         cca = p.analyses.CallingConvention(f)
@@ -380,7 +432,9 @@ class TestDecompiler(unittest.TestCase):
         strncmp_stmt = strncmp_expr + ";"
         assert strncmp_stmt not in code, "Call expressions folding failed for strncmp()"
 
-        assert "= sprintf" not in code, "Failed to remove the unused return value of sprintf()"
+        assert (
+            "= sprintf" not in code
+        ), "Failed to remove the unused return value of sprintf()"
 
     def test_decompiling_1after909_doit(self):
 
@@ -393,15 +447,20 @@ class TestDecompiler(unittest.TestCase):
         p.analyses.CompleteCallingConventions(recover_variables=True)
 
         # doit
-        f = cfg.functions['doit']
+        f = cfg.functions["doit"]
         optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes(
             p.arch, p.simos.name
         )
-        if angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier not in optimization_passes:
+        if (
+            angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier
+            not in optimization_passes
+        ):
             optimization_passes += [
                 angr.analyses.decompiler.optimization_passes.EagerReturnsSimplifier,
             ]
-        dec = p.analyses.Decompiler(f, cfg=cfg.model, optimization_passes=optimization_passes)
+        dec = p.analyses.Decompiler(
+            f, cfg=cfg.model, optimization_passes=optimization_passes
+        )
         if dec.codegen is None:
             print("Failed to decompile function %r." % f)
             assert False
@@ -409,12 +468,16 @@ class TestDecompiler(unittest.TestCase):
         code = dec.codegen.text
         print(code)
         # with EagerReturnSimplifier applied, there should be no goto!
-        assert "goto" not in code.lower(), "Found goto statements. EagerReturnSimplifier might have failed."
+        assert (
+            "goto" not in code.lower()
+        ), "Found goto statements. EagerReturnSimplifier might have failed."
         # with global variables discovered, there should not be any loads of constant addresses.
         assert "fflush(stdout);" in code.lower()
 
         m = re.search(r"if \([\S]*access\(&[\S]+, [\S]+\) != 0\)", code)
-        assert m is not None, "The if branch at 0x401c91 is not found. Structurer is incorrectly removing conditionals."
+        assert (
+            m is not None
+        ), "The if branch at 0x401c91 is not found. Structurer is incorrectly removing conditionals."
 
         # Arguments to the convert call should be fully folded into the call statement itself
         code_lines = [line.strip(" ") for line in code.split("\n")]
@@ -422,8 +485,10 @@ class TestDecompiler(unittest.TestCase):
             if "convert(" in line:
                 # the previous line must be a curly brace
                 assert i > 0
-                assert code_lines[i - 1] == "{", "Some arguments to convert() are probably not folded into this call " \
-                                                 "statement."
+                assert code_lines[i - 1] == "{", (
+                    "Some arguments to convert() are probably not folded into this call "
+                    "statement."
+                )
                 break
         else:
             assert False, "Call to convert() is not found in decompilation output."
@@ -435,7 +500,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
 
-        func = cfg.functions[0x41d000]
+        func = cfg.functions[0x41D000]
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         if dec.codegen is not None:
             code = dec.codegen.text
@@ -454,7 +519,7 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(data_references=True, normalize=True)
         _ = p.analyses.CompleteCallingConventions(recover_variables=True)
 
-        func = cfg.functions['main']
+        func = cfg.functions["main"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
@@ -467,11 +532,14 @@ class TestDecompiler(unittest.TestCase):
 
     def test_decompiling_strings_c_representation(self):
 
-        input_expected = [("""Foo"bar""", "\"Foo\\\"bar\""),
-                          ("""Foo'bar""", "\"Foo'bar\"")]
+        input_expected = [("""Foo"bar""", '"Foo\\"bar"'), ("""Foo'bar""", '"Foo\'bar"')]
 
         for (_input, expected) in input_expected:
-            result = angr.analyses.decompiler.structured_codegen.c.CConstant.str_to_c_str(_input)
+            result = (
+                angr.analyses.decompiler.structured_codegen.c.CConstant.str_to_c_str(
+                    _input
+                )
+            )
             assert result == expected
 
     def test_decompiling_strings_local_strlen(self):
@@ -479,7 +547,7 @@ class TestDecompiler(unittest.TestCase):
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
-        func = cfg.functions['local_strlen']
+        func = cfg.functions["local_strlen"]
 
         _ = p.analyses.VariableRecoveryFast(func)
         cca = p.analyses.CallingConvention(func, cfg=cfg.model)
@@ -493,14 +561,16 @@ class TestDecompiler(unittest.TestCase):
         print(code)
         # Make sure argument a0 is correctly typed to char*
         lines = code.split("\n")
-        assert "local_strlen(char *a0)" in lines[0], "Argument a0 seems to be incorrectly typed: %s" % lines[0]
+        assert "local_strlen(char *a0)" in lines[0], (
+            "Argument a0 seems to be incorrectly typed: %s" % lines[0]
+        )
 
     def test_decompiling_strings_local_strcat(self):
         bin_path = os.path.join(test_location, "x86_64", "types", "strings")
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
-        func = cfg.functions['local_strcat']
+        func = cfg.functions["local_strcat"]
 
         _ = p.analyses.VariableRecoveryFast(func)
         cca = p.analyses.CallingConvention(func, cfg=cfg.model)
@@ -514,22 +584,23 @@ class TestDecompiler(unittest.TestCase):
         print(code)
         # Make sure argument a0 is correctly typed to char*
         lines = code.split("\n")
-        assert "local_strcat(char *a0, char *a1)" in lines[0], \
+        assert "local_strcat(char *a0, char *a1)" in lines[0], (
             "Argument a0 and a1 seem to be incorrectly typed: %s" % lines[0]
+        )
 
     def test_decompiling_strings_local_strcat_with_local_strlen(self):
         bin_path = os.path.join(test_location, "x86_64", "types", "strings")
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
-        func_strlen = cfg.functions['local_strlen']
+        func_strlen = cfg.functions["local_strlen"]
         _ = p.analyses.VariableRecoveryFast(func_strlen)
         cca = p.analyses.CallingConvention(func_strlen, cfg=cfg.model)
         func_strlen.calling_convention = cca.cc
         func_strlen.prototype = cca.prototype
         p.analyses.Decompiler(func_strlen, cfg=cfg.model)
 
-        func = cfg.functions['local_strcat']
+        func = cfg.functions["local_strcat"]
 
         _ = p.analyses.VariableRecoveryFast(func)
         cca = p.analyses.CallingConvention(func, cfg=cfg.model)
@@ -543,32 +614,43 @@ class TestDecompiler(unittest.TestCase):
         print(code)
         # Make sure argument a0 is correctly typed to char*
         lines = code.split("\n")
-        assert "local_strcat(char *a0, char *a1)" in lines[0], \
+        assert "local_strcat(char *a0, char *a1)" in lines[0], (
             "Argument a0 and a1 seem to be incorrectly typed: %s" % lines[0]
+        )
 
     def test_decompilation_call_expr_folding(self):
-        bin_path = os.path.join(test_location, "x86_64", "decompiler", "call_expr_folding")
+        bin_path = os.path.join(
+            test_location, "x86_64", "decompiler", "call_expr_folding"
+        )
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
 
-        func_0 = cfg.functions['strlen_should_fold']
-        opt = [o for o in angr.analyses.decompiler.decompilation_options.options if o.param == "remove_dead_memdefs"][0]
+        func_0 = cfg.functions["strlen_should_fold"]
+        opt = [
+            o
+            for o in angr.analyses.decompiler.decompilation_options.options
+            if o.param == "remove_dead_memdefs"
+        ][0]
         dec = p.analyses.Decompiler(func_0, cfg=cfg.model, options=[(opt, True)])
         code = dec.codegen.text
         print(code)
-        m = re.search(r"v(\d+) = \(int\)strlen\(&v(\d+)\);", code)  # e.g., s_428 = (int)strlen(&s_418);
-        assert m is not None, "The result of strlen() should be directly assigned to a stack " \
-                              "variable because of call-expression folding."
+        m = re.search(
+            r"v(\d+) = \(int\)strlen\(&v(\d+)\);", code
+        )  # e.g., s_428 = (int)strlen(&s_418);
+        assert m is not None, (
+            "The result of strlen() should be directly assigned to a stack "
+            "variable because of call-expression folding."
+        )
         assert m.group(1) != m.group(2)
 
-        func_1 = cfg.functions['strlen_should_not_fold']
+        func_1 = cfg.functions["strlen_should_not_fold"]
         dec = p.analyses.Decompiler(func_1, cfg=cfg.model)
         code = dec.codegen.text
         print(code)
         assert code.count("strlen(") == 1
 
-        func_2 = cfg.functions['strlen_should_not_fold_into_loop']
+        func_2 = cfg.functions["strlen_should_not_fold_into_loop"]
         dec = p.analyses.Decompiler(func_2, cfg=cfg.model)
         code = dec.codegen.text
         print(code)
@@ -647,7 +729,11 @@ class TestDecompiler(unittest.TestCase):
             assert False, "The line with snprintf() is not found."
 
         # with dead memdef removal
-        opt = [o for o in angr.analyses.decompiler.decompilation_options.options if o.param == "remove_dead_memdefs"][0]
+        opt = [
+            o
+            for o in angr.analyses.decompiler.decompilation_options.options
+            if o.param == "remove_dead_memdefs"
+        ][0]
         # kill the cache since variables to statements won't match any more - variables are re-discovered with the new
         # option.
         p.kb.structured_code.cached.clear()
@@ -672,7 +758,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
         p.analyses.CompleteCallingConventions(recover_variables=True)
-        func = cfg.functions['main']
+        func = cfg.functions["main"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
@@ -680,15 +766,17 @@ class TestDecompiler(unittest.TestCase):
 
         # make sure there are no empty code blocks
         code = code.replace(" ", "").replace("\n", "")
-        assert "{}" not in code, "Found empty code blocks in decompilation output. This may indicate some assignments " \
-                                 "are incorrectly removed."
+        assert "{}" not in code, (
+            "Found empty code blocks in decompilation output. This may indicate some assignments "
+            "are incorrectly removed."
+        )
 
     def test_decompiling_fauxware_mipsel(self):
         bin_path = os.path.join(test_location, "mipsel", "fauxware")
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
-        func = cfg.functions['main']
+        func = cfg.functions["main"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
@@ -705,11 +793,13 @@ class TestDecompiler(unittest.TestCase):
     def test_stack_canary_removal_x8664_extra_exits(self):
 
         # Test stack canary removal on functions with extra exit nodes (e.g., assert(false);) without stack canary checks
-        bin_path = os.path.join(test_location, "x86_64", "decompiler", "babyheap_level1_teaching1")
+        bin_path = os.path.join(
+            test_location, "x86_64", "decompiler", "babyheap_level1_teaching1"
+        )
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
-        func = cfg.functions['main']
+        func = cfg.functions["main"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
@@ -721,11 +811,13 @@ class TestDecompiler(unittest.TestCase):
     def test_ifelseif_x8664(self):
 
         # nested if-else should be transformed to cascading if-elseif constructs
-        bin_path = os.path.join(test_location, "x86_64", "decompiler", "babyheap_level1_teaching1")
+        bin_path = os.path.join(
+            test_location, "x86_64", "decompiler", "babyheap_level1_teaching1"
+        )
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
-        func = cfg.functions['main']
+        func = cfg.functions["main"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
@@ -738,7 +830,7 @@ class TestDecompiler(unittest.TestCase):
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
-        func = cfg.functions['main']
+        func = cfg.functions["main"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
@@ -760,7 +852,7 @@ class TestDecompiler(unittest.TestCase):
         cfg = p.analyses.CFG(data_references=True, normalize=True)
         p.analyses.CompleteCallingConventions(recover_variables=True)
 
-        func = cfg.functions['my_message_callback']
+        func = cfg.functions["my_message_callback"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
@@ -774,19 +866,23 @@ class TestDecompiler(unittest.TestCase):
         assert code.count("mosquitto_publish(") == 6
 
     def test_decompiling_morton_lib_handle__suback(self):
-        bin_path = os.path.join(test_location, "x86_64", "decompiler", "morton.libmosquitto.so.1")
+        bin_path = os.path.join(
+            test_location, "x86_64", "decompiler", "morton.libmosquitto.so.1"
+        )
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
         p.analyses.CompleteCallingConventions(recover_variables=True)
 
-        func = cfg.functions.function(name='handle__suback', plt=False)
+        func = cfg.functions.function(name="handle__suback", plt=False)
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
 
         print(code)
-        assert "__stack_chk_fail" not in code  # stack canary checks should be removed by default
+        assert (
+            "__stack_chk_fail" not in code
+        )  # stack canary checks should be removed by default
 
     def test_decompiling_newburry_main(self):
         bin_path = os.path.join(test_location, "x86_64", "decompiler", "newbury")
@@ -794,7 +890,7 @@ class TestDecompiler(unittest.TestCase):
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
 
-        func = cfg.functions['main']
+        func = cfg.functions["main"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text
@@ -804,12 +900,14 @@ class TestDecompiler(unittest.TestCase):
         assert re.search(r"for[^\n]*return[^\n]*;", code) is None
 
     def test_single_instruction_loop(self):
-        bin_path = os.path.join(test_location, "x86_64", "decompiler", "level_12_teaching")
+        bin_path = os.path.join(
+            test_location, "x86_64", "decompiler", "level_12_teaching"
+        )
         p = angr.Project(bin_path, auto_load_libs=False)
 
         cfg = p.analyses.CFG(data_references=True, normalize=True)
 
-        func = cfg.functions['main']
+        func = cfg.functions["main"]
 
         dec = p.analyses.Decompiler(func, cfg=cfg.model)
         code = dec.codegen.text

@@ -5,9 +5,9 @@ import logging
 import time
 import unittest
 
-l = logging.getLogger("angr.tests.test_ddg")
-
 import angr
+
+l = logging.getLogger("angr.tests.test_ddg")
 
 # Load the tests
 test_location = os.path.join(
