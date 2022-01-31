@@ -3,11 +3,11 @@ import gc
 import os
 import pickle
 import logging
-import sys
 import unittest
 
-import angr
 from common import slow_test
+import angr
+
 
 from angr.state_plugins.history import HistoryIter
 
