@@ -1,7 +1,9 @@
-import re
+# pylint: disable=missing-class-docstring,disable=no-self-use
 import os
-import angr
+import re
 import unittest
+
+import angr
 from angr.analyses import VariableRecoveryFast, CallingConventionAnalysis, \
     CompleteCallingConventionsAnalysis, CFGFast, Decompiler
 
