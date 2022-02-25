@@ -34,7 +34,7 @@ class TestEcho(unittest.TestCase):
 
     def test_echo_haha(self):
         for arch in target_arches:
-            yield self.run_echo_haha, arch
+            self.run_echo_haha(arch)
 
 
 if __name__ == "__main__":

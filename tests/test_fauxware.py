@@ -1,13 +1,11 @@
-# pylint: disable=missing-class-docstring,disable=no-self-use
 import gc
 import os
+import unittest
 import pickle
 import logging
-import unittest
-
 from common import slow_test
-import angr
 
+import angr
 
 from angr.state_plugins.history import HistoryIter
 
@@ -53,7 +51,7 @@ divergences = {
 
 
 class TestFauxware(unittest.TestCase):
-    def run_fauxware(self, arch):
+    def _run_fauxware(self, arch):
         p = angr.Project(
             os.path.join(test_location, arch, "fauxware"), auto_load_libs=False
         )
@@ -71,7 +69,7 @@ class TestFauxware(unittest.TestCase):
         # p.factory.block(divergent_point.addr).pp()
         assert divergent_point.recent_bbl_addrs[0] == divergences[arch]
 
-    def run_pickling(self, arch):
+    def _run_pickling(self, arch):
         p = angr.Project(os.path.join(test_location, arch, "fauxware"), auto_load_libs=False)
         pg = p.factory.simulation_manager().run(n=10)
         pickled = pickle.dumps(pg, pickle.HIGHEST_PROTOCOL)
@@ -85,11 +83,11 @@ class TestFauxware(unittest.TestCase):
         assert b"\x00\x00\x00\x00\x00\x00\x00\x00\x00SOSNEAKY\x00" == stdin
 
     @slow_test
-    def run_fastmem(self, arch):
+    def _run_fastmem(self, arch):
         p = angr.Project(os.path.join(test_location, arch, "fauxware"), auto_load_libs=False)
         p.analyses.CongruencyCheck(throw=True).set_state_options(right_add_options={"FAST_REGISTERS"}).run()
 
-    def run_nodecode(self, arch):
+    def _run_nodecode(self, arch):
         p = angr.Project(os.path.join(test_location, arch, "fauxware"), auto_load_libs=False)
 
         # screw up the instructions and make sure the test fails with nodecode
@@ -114,7 +112,7 @@ class TestFauxware(unittest.TestCase):
         stdin = results.found[0].posix.dumps(0)
         assert b"\x00\x00\x00\x00\x00\x00\x00\x00\x00SOSNEAKY\x00" == stdin
 
-    def run_merge(self, arch):
+    def _run_merge(self, arch):
         p = angr.Project(os.path.join(test_location, arch, "fauxware"), auto_load_libs=False)
         pg = p.factory.simulation_manager()
         pg.explore()
@@ -148,31 +146,75 @@ class TestFauxware(unittest.TestCase):
                 inp, cast_to=bytes, extra_constraints=(no,)
             )
 
-    def test_merge(self):
-        for arch in target_addrs:
-            yield self.run_merge, arch
+    def test_merge_i386(self):
+        self._run_merge("i386")
 
-    def test_fauxware(self):
-        for arch in target_addrs:
-            yield self.run_fauxware, arch
+    def test_merge_x86_64(self):
+        self._run_merge("x86_64")
 
-    def test_pickling(self):
-        for arch in corrupt_addrs:
-            yield self.run_pickling, arch
+    def test_merge_ppc(self):
+        self._run_merge("ppc")
+
+    def test_merge_armel(self):
+        self._run_merge("armel")
+
+    def test_merge_android(self):
+        self._run_merge("android/arm")
+
+    def test_merge_mips(self):
+        self._run_merge("mips")
+
+    def test_fauxware_i386(self):
+        self._run_fauxware("i386")
+
+    def test_fauxware_x86_64(self):
+        self._run_fauxware("x86_64")
+
+    def test_fauxware_ppc(self):
+        self._run_fauxware("ppc")
+
+    def test_fauxware_armel(self):
+        self._run_fauxware("armel")
+
+    def test_fauxware_android(self):
+        self._run_fauxware("android/arm")
+
+    def test_fauxware_mips(self):
+        self._run_fauxware("mips")
+
+    def test_pickling_i386(self):
+        self._run_pickling("i386")
+
+    def test_pickling_x86_64(self):
+        self._run_pickling("x86_64")
+
+    def test_pickling_ppc(self):
+        self._run_pickling("ppc")
+
+    def test_pickling_armel(self):
+        self._run_pickling("armel")
+
+    def test_pickling_mips(self):
+        self._run_pickling("mips")
 
     @slow_test
-    def test_fastmem(self):
-        # for arch in target_addrs:
-        #   yield run_fastmem, arch
-        # TODO: add support for comparing flags of other architectures
-        # yield run_fastmem, "i386"
-        yield self.run_fastmem, "x86_64"
-        # yield run_fastmem, "ppc"
-        # yield run_fastmem, "mips"
+    def test_fastmen(self):
+        self._run_fastmem("x86_64")
 
-    def test_nodecode(self):
-        for arch in corrupt_addrs:
-            yield self.run_nodecode, arch
+    def test_nodecode_i386(self):
+        self._run_nodecode("i386")
+
+    def test_nodecode_x86_64(self):
+        self._run_nodecode("x86_64")
+
+    def test_nodecode_ppc(self):
+        self._run_nodecode("ppc")
+
+    def test_nodecode_armel(self):
+        self._run_nodecode("armel")
+
+    def test_nodecode_mips(self):
+        self._run_nodecode("mips")
 
 
 if __name__ == "__main__":
