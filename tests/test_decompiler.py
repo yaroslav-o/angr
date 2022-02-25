@@ -462,8 +462,8 @@ class TestDecompiler(unittest.TestCase):
         code = dec.codegen.text
         print(code)
 
-        argc_name = " a0"  # update this variable once the decompiler picks up argument names from the common definition of
-        # main()
+        argc_name = " a0"  # update this variable once the decompiler picks up argument names from the common
+        # definition of main()
         assert argc_name in code
         assert code.count(argc_name) == 1  # it should only appear once
 
@@ -641,8 +641,8 @@ class TestDecompiler(unittest.TestCase):
         for line in lines:
             if "snprintf" in line:
                 # The line should look like this:
-                #   v0 = (int)snprintf(v32[8], (v43 + 0x1) * 0x2 + 0x1a, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT\r\n", &v34,
-                #   ((long long)v35), &v33, ((long long)v36 + 1900), ((long long)v35), ((long long)v35), ((long long)v35));
+                # v0 = (int)snprintf(v32[8], (v43 + 0x1) * 0x2 + 0x1a, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT\r\n", &v34,
+                # ((long long)v35), &v33, ((long long)v36 + 1900),((long long)v35), ((long long)v35), ((long long)v35));
                 assert "1900" in line, "There is a missing stack argument."
                 break
         else:
@@ -661,8 +661,8 @@ class TestDecompiler(unittest.TestCase):
         for line in lines:
             if "snprintf" in line:
                 # The line should look like this:
-                #   v0 = (int)snprintf(v32[8], (v43 + 0x1) * 0x2 + 0x1a, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT\r\n", &v34,
-                #   ((long long)v35), &v33, ((long long)v36 + 1900), ((long long)v35), ((long long)v35), ((long long)v35));
+                # v0 = (int)snprintf(v32[8], (v43 + 0x1) * 0x2 + 0x1a, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT\r\n", &v34,
+                # ((long long)v35), &v33, ((long long)v36 + 1900),((long long)v35),((long long)v35), ((long long)v35));
                 assert "1900" in line, "There is a missing stack argument."
                 break
         else:
@@ -682,8 +682,8 @@ class TestDecompiler(unittest.TestCase):
 
         # make sure there are no empty code blocks
         code = code.replace(" ", "").replace("\n", "")
-        assert "{}" not in code, "Found empty code blocks in decompilation output. This may indicate some assignments " \
-                                 "are incorrectly removed."
+        assert "{}" not in code, "Found empty code blocks in decompilation output. " \
+                                 "This may indicate some assignments are incorrectly removed."
 
     def test_decompiling_fauxware_mipsel(self):
         bin_path = os.path.join(test_location, "mipsel", "fauxware")
@@ -706,7 +706,8 @@ class TestDecompiler(unittest.TestCase):
 
     def test_stack_canary_removal_x8664_extra_exits(self):
 
-        # Test stack canary removal on functions with extra exit nodes (e.g., assert(false);) without stack canary checks
+        # Test stack canary removal on functions with extra exit nodes (e.g., assert(false);) without stack canary
+        # checks
         bin_path = os.path.join(test_location, "x86_64", "decompiler", "babyheap_level1_teaching1")
         p = angr.Project(bin_path, auto_load_libs=False)
 
