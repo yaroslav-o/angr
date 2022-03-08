@@ -1,8 +1,6 @@
-# pylint: disable=missing-class-docstring,disable=no-self-use
-import os
 import re
+import os
 import unittest
-
 import angr
 from angr.analyses import VariableRecoveryFast, CallingConventionAnalysis, \
     CompleteCallingConventionsAnalysis, CFGFast, Decompiler
@@ -353,6 +351,27 @@ class TestDecompiler(unittest.TestCase):
         dec = p.analyses.Decompiler(f, cfg=cfg.model)
         print(dec.codegen.text)
 
+    def test_decompiling_true_mips64(self):
+
+        bin_path = os.path.join(test_location, "mips64", "true")
+        p = angr.Project(bin_path, auto_load_libs=False, load_debug_info=False)
+        cfg = p.analyses[CFGFast].prep()(normalize=True, data_references=True)
+
+        all_optimization_passes = angr.analyses.decompiler.optimization_passes.get_default_optimization_passes("MIPS64",
+                                                                                                               "linux")
+
+        f = cfg.functions['main']
+        dec = p.analyses[Decompiler].prep()(f, cfg=cfg.model, optimization_passes=all_optimization_passes)
+        # make sure strings exist
+        assert '"coreutils"' in dec.codegen.text
+        assert '"/usr/local/share/locale"' in dec.codegen.text
+        assert '"--help"' in dec.codegen.text
+        assert '"Jim Meyering"' in dec.codegen.text
+        # make sure function calls exist
+        assert "set_program_name(" in dec.codegen.text
+        assert "setlocale(" in dec.codegen.text
+        assert "usage();" in dec.codegen.text
+
     def test_decompiling_1after909_verify_password(self):
 
         bin_path = os.path.join(test_location, "x86_64", "1after909")
@@ -576,6 +595,45 @@ class TestDecompiler(unittest.TestCase):
         print(code)
         assert code.count("strlen(") == 1
 
+    def test_decompilation_call_expr_folding_mips64_true(self):
+
+        # This test is to ensure call expression folding correctly replaces call expressions in return statements
+        bin_path = os.path.join(test_location, "mips64", "true")
+        p = angr.Project(bin_path, auto_load_libs=False)
+
+        cfg = p.analyses[CFGFast].prep()(data_references=True, normalize=True)
+
+        func_0 = cfg.functions['version_etc']
+        dec = p.analyses[Decompiler].prep()(func_0, cfg=cfg.model)
+        code = dec.codegen.text
+        print(code)
+        assert "version_etc_va(" in code
+
+    def test_decompilation_call_expr_folding_x8664_calc(self):
+
+        # This test is to ensure call expression folding do not re-use out-dated definitions when folding expressions
+        bin_path = os.path.join(test_location, "x86_64", "calc")
+        p = angr.Project(bin_path, auto_load_libs=False)
+
+        cfg = p.analyses[CFGFast].prep()(data_references=True, normalize=True)
+        _ = p.analyses.CompleteCallingConventions(recover_variables=True)
+
+        func_0 = cfg.functions['main']
+        dec = p.analyses[Decompiler].prep()(func_0, cfg=cfg.model)
+        code = dec.codegen.text
+        print(code)
+
+        assert "root(" in code
+        assert "strlen(" in code  # incorrect call expression folding would fold root() into printf() and remove
+        # strlen()
+        assert "printf(" in code
+
+        lines = code.split("\n")
+        # make sure root() and strlen() appear within the same line
+        for line in lines:
+            if "root(" in line:
+                assert "strlen(" in line
+
     def test_decompilation_excessive_condition_removal(self):
         bin_path = os.path.join(test_location, "x86_64", "decompiler", "bf")
         p = angr.Project(bin_path, auto_load_libs=False)
@@ -640,10 +698,10 @@ class TestDecompiler(unittest.TestCase):
         lines = code.split("\n")
         for line in lines:
             if "snprintf" in line:
-                # The line should look like this:
-                # v0 = (int)snprintf(v32[8], (v43 + 0x1) * 0x2 + 0x1a, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT\r\n", &v34,
-                # ((long long)v35), &v33, ((long long)v36 + 1900),((long long)v35), ((long long)v35), ((long long)v35));
-                assert "1900" in line, "There is a missing stack argument."
+                # The line should look like this: v0 = (int)snprintf(v32[8], (v43 + 0x1) * 0x2 + 0x1a, "%s,
+                # %.2d %s %d %.2d:%.2d:%.2d GMT\r\n", &v34, ((long long)v35), &v33, ((long long)v36 + 1900),
+                # ((long long)v35), ((long long)v35), ((long long)v35));
+                assert line.count(',') == 10, "There is a missing stack argument."
                 break
         else:
             assert False, "The line with snprintf() is not found."
@@ -660,10 +718,10 @@ class TestDecompiler(unittest.TestCase):
         lines = code.split("\n")
         for line in lines:
             if "snprintf" in line:
-                # The line should look like this:
-                # v0 = (int)snprintf(v32[8], (v43 + 0x1) * 0x2 + 0x1a, "%s, %.2d %s %d %.2d:%.2d:%.2d GMT\r\n", &v34,
-                # ((long long)v35), &v33, ((long long)v36 + 1900),((long long)v35),((long long)v35), ((long long)v35));
-                assert "1900" in line, "There is a missing stack argument."
+                # The line should look like this: v0 = (int)snprintf(v32[8], (v43 + 0x1) * 0x2 + 0x1a, "%s,
+                # %.2d %s %d %.2d:%.2d:%.2d GMT\r\n", &v34, ((long long)v35), &v33, ((long long)v36 + 1900),
+                # ((long long)v35), ((long long)v35), ((long long)v35));
+                assert line.count(',') == 10, "There is a missing stack argument."
                 break
         else:
             assert False, "The line with snprintf() is not found."
@@ -682,8 +740,8 @@ class TestDecompiler(unittest.TestCase):
 
         # make sure there are no empty code blocks
         code = code.replace(" ", "").replace("\n", "")
-        assert "{}" not in code, "Found empty code blocks in decompilation output. " \
-                                 "This may indicate some assignments are incorrectly removed."
+        assert "{}" not in code, "Found empty code blocks in decompilation output. This may indicate some assignments " \
+                                 "are incorrectly removed."
 
     def test_decompiling_fauxware_mipsel(self):
         bin_path = os.path.join(test_location, "mipsel", "fauxware")
@@ -821,6 +879,30 @@ class TestDecompiler(unittest.TestCase):
         code_without_spaces = code.replace(" ", "").replace("\n", "")
         assert "while(true" not in code_without_spaces
         assert "for(" in code_without_spaces
+
+    def test_simple_strcpy(self):
+        """
+        Original C: while (( *dst++ = *src++ ));
+        Ensures incremented src and dst are not accidentally used in copy statement.
+        """
+        bin_path = os.path.join(test_location, "x86_64", "test_simple_strcpy")
+        p = angr.Project(bin_path, auto_load_libs=False)
+
+        cfg = p.analyses.CFGFast(normalize=True)
+        p.analyses.CompleteCallingConventions(cfg=cfg, recover_variables=True)
+
+        f = p.kb.functions['simple_strcpy']
+        d = p.analyses.Decompiler(f, cfg=cfg.model)
+        print(d.codegen.text)
+        dw = d.codegen.cfunc.statements.statements[1]
+        assert isinstance(dw, angr.analyses.decompiler.structured_codegen.c.CDoWhileLoop)
+        stmts = dw.body.statements
+        assert len(stmts) == 5
+        assert stmts[1].lhs.unified_variable == stmts[0].rhs.unified_variable
+        assert stmts[3].lhs.unified_variable == stmts[2].rhs.unified_variable
+        assert stmts[4].lhs.variable.variable == stmts[2].lhs.variable
+        assert stmts[4].rhs.variable.variable == stmts[0].lhs.variable
+        assert dw.condition.lhs.expr.variable.variable == stmts[2].lhs.variable
 
 
 if __name__ == "__main__":
