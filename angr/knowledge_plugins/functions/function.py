@@ -41,7 +41,7 @@ class Function(Serializable):
                  'bp_on_stack', 'retaddr_on_stack', 'sp_delta', 'calling_convention', 'prototype', '_returning',
                  'prepared_registers', 'prepared_stack_variables', 'registers_read_afterwards',
                  'startpoint', '_addr_to_block_node', '_block_sizes', '_block_cache', '_local_blocks',
-                 '_local_block_addrs', 'info', 'tags', 'alignment', 'is_prototype_guessed',
+                 '_local_block_addrs', 'info', 'tags', 'alignment', 'is_prototype_guessed', 'ran_cca',
                  )
 
     def __init__(self, function_manager, addr, name=None, syscall=None, is_simprocedure=None, binary_name=None,
@@ -121,6 +121,8 @@ class Function(Serializable):
         self._argument_stack_variables = []
 
         self._project = None  # type: Optional[Project] # will be initialized upon the first access to self.project
+
+        self.ran_cca = False  # this is set by CompleteCallingConventions to avoid reprocessing failed functions
 
         #
         # Initialize unspecified properties
@@ -287,6 +289,9 @@ class Function(Serializable):
 
     # compatibility
     _get_block = get_block
+
+    def get_block_size(self, addr: int) -> Optional[int]:
+        return self._block_sizes.get(addr, None)
 
     @property
     def nodes(self) -> Generator[CodeNode,None,None]:
@@ -512,6 +517,19 @@ class Function(Serializable):
                                                    hex(self.addr) if isinstance(self.addr, int) else self.addr)
         return '<Function %s (%s)>' % (self.name, hex(self.addr) if isinstance(self.addr, int) else self.addr)
 
+    def __setstate__(self, state):
+        for k, v in state.items():
+            setattr(self, k, v)
+
+    def __getstate__(self):
+        # self._local_transition_graph is a cache. don't pickle it
+        d = dict((k, getattr(self, k)) for k in self.__slots__)
+        d['_local_transition_graph'] = None
+        d['_project'] = None
+        d['_function_manager'] = None
+        d['_block_cache'] = { }
+        return d
+
     @property
     def endpoints(self):
         return list(itertools.chain(*self._endpoints.values()))
@@ -664,8 +682,11 @@ class Function(Serializable):
             hooker = self.project.simos.syscall_from_addr(self.addr)
         elif self.is_simprocedure:
             hooker = self.project.hooked_by(self.addr)
-        if hooker and hasattr(hooker, 'NO_RET'):
-            return not hooker.NO_RET
+        if hooker:
+            if hasattr(hooker, 'DYNAMIC_RET') and hooker.DYNAMIC_RET:
+                return True
+            elif hasattr(hooker, 'NO_RET'):
+                return not hooker.NO_RET
 
         # Cannot determine
         return None

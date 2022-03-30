@@ -299,7 +299,7 @@ class CallingConventionAnalysis(Analysis):
             # include its successor.
 
             # Re-lift the target block
-            dst_bb = self.project.factory.block(dst.addr, func.get_block(dst.addr).size, opt_level=1)
+            dst_bb = self.project.factory.block(dst.addr, func.get_block_size(dst.addr), opt_level=1)
 
             # If there is only one 'IMark' statement in vex --> the target block contains only direct jump
             if len(dst_bb.vex.statements) == 1 and dst_bb.vex.statements[0].tag == 'Ist_IMark'\
@@ -437,12 +437,13 @@ class CallingConventionAnalysis(Analysis):
             if isinstance(variable, SimStackVariable):
                 # a stack variable. convert it to a stack argument.
                 # TODO: deal with the variable base
-                if variable.offset <= 0:
+                if self.project.arch.call_pushes_ret and variable.offset <= 0:
                     # skip the return address on the stack
                     # TODO: make sure it was the return address
                     continue
-                arg = SimStackArg(variable.offset - ret_addr_offset, variable.size)
-                args.add(arg)
+                if variable.offset - ret_addr_offset >= 0:
+                    arg = SimStackArg(variable.offset - ret_addr_offset, variable.size)
+                    args.add(arg)
             elif isinstance(variable, SimRegisterVariable):
                 # a register variable, convert it to a register argument
                 if not self._is_sane_register_variable(variable):

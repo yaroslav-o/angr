@@ -1,13 +1,14 @@
 import copy
 from collections import defaultdict
 import logging
-from typing import Dict, List, Tuple, Set, Optional, Iterable, Union, Type, TYPE_CHECKING
+from typing import Dict, List, Tuple, Set, Optional, Iterable, Union, Type, Any, TYPE_CHECKING
 
 import networkx
 
 import ailment
 
 from ...knowledge_base import KnowledgeBase
+from ...knowledge_plugins.functions import Function
 from ...codenode import BlockNode
 from ...utils import timethis
 from ...calling_conventions import SimRegArg, SimStackArg, SimFunctionArgument
@@ -131,7 +132,7 @@ class Clinic(Analysis):
         if not self._func_graph:
             return
 
-        # Make sure calling conventions of all functions have been recovered
+        # Make sure calling conventions of all functions that the current function calls have been recovered
         self._update_progress(10., text="Recovering calling conventions")
         self._recover_calling_conventions()
 
@@ -197,6 +198,10 @@ class Clinic(Analysis):
         self._simplify_function(ail_graph, remove_dead_memdefs=self._remove_dead_memdefs,
                                 stack_arg_offsets=stackarg_offsets, unify_variables=True)
 
+        self._update_progress(68., text="Simplifying blocks 3")
+        ail_graph = self._simplify_blocks(ail_graph, remove_dead_memdefs=self._remove_dead_memdefs,
+                                          stack_pointer_tracker=spt)
+
         # Make function arguments
         self._update_progress(70., text="Making argument list")
         arg_list = self._make_argument_list()
@@ -256,7 +261,19 @@ class Clinic(Analysis):
 
     @timethis
     def _recover_calling_conventions(self):
-        self.project.analyses.CompleteCallingConventions()
+
+        callees = set()
+        for node in self.function.transition_graph:
+            if isinstance(node, Function):
+                callees.add(node.addr)
+        callees.add(self.function.addr)
+
+        self.project.analyses.CompleteCallingConventions(
+            recover_variables=False,
+            prioritize_func_addrs=callees,
+            skip_other_funcs=True,
+            skip_signature_matched_functions=True,
+        )
 
     @timethis
     def _track_stack_pointers(self):
@@ -546,6 +563,7 @@ class Clinic(Analysis):
             if block is not None \
                     and not stmt.ret_exprs \
                     and self.function.prototype is not None \
+                    and self.function.prototype.returnty is not None \
                     and type(self.function.prototype.returnty) is not SimTypeBottom:
                 new_stmt = stmt.copy()
                 ret_val = self.function.calling_convention.return_val(self.function.prototype.returnty)
@@ -648,6 +666,13 @@ class Clinic(Analysis):
         except Exception:  # pylint:disable=broad-except
             l.warning("Typehoon analysis failed. Variables will not have types. Please report to GitHub.",
                       exc_info=True)
+
+        # for any left-over variables, assign Bottom type (which will get "corrected" into a default type in
+        # VariableManager)
+        bottype = SimTypeBottom().with_arch(self.project.arch)
+        for var in var_manager._variables:
+            if var not in var_manager.variable_to_types:
+                var_manager.set_variable_type(var, bottype)
 
         # Unify SSA variables
         tmp_kb.variables.global_manager.assign_variable_names(labels=self.kb.labels, types={SimMemoryVariable})
@@ -760,24 +785,19 @@ class Clinic(Analysis):
             variables = variable_manager.find_variables_by_atom(block.addr, stmt_idx, expr)
             if len(variables) == 0:
                 # if it's a constant addr, maybe it's referencing an extern location
-                if isinstance(expr.addr, ailment.Expr.Const):
-                    # is there a variable for it?
-                    global_vars = global_variables.get_global_variables(expr.addr.value)
-                    if not global_vars:
-                        # detect if there is a related symbol
-                        symbol = self.project.loader.find_symbol(expr.addr.value)
-                        if symbol is not None:
-                            # Create a new global variable if there isn't one already
-                            global_vars = global_variables.get_global_variables(symbol.rebased_addr)
-                            if not global_vars:
-                                global_var = SimMemoryVariable(symbol.rebased_addr, symbol.size, name=symbol.name)
-                                global_variables.add_variable('global', global_var.addr, global_var)
-                                global_vars = {global_var}
-                    if global_vars:
-                        global_var = next(iter(global_vars))
-                        expr.variable = global_var
-                        expr.variable_offset = 0
-                else:
+                base_addr, offset = self.parse_variable_addr(expr.addr)
+                if offset is not None:
+                    self._link_variables_on_expr(variable_manager, global_variables, block, stmt_idx, stmt, offset)
+                if base_addr is not None:
+                    self._link_variables_on_expr(variable_manager, global_variables, block, stmt_idx, stmt, base_addr)
+
+                # if we are accessing the variable directly (offset == 0), we link the variable onto this expression
+                if offset == 0 or (isinstance(offset, ailment.Expr.Const) and offset.value == 0):
+                    if 'reference_variable' in base_addr.tags:
+                        expr.variable = base_addr.reference_variable
+                        expr.variable_offset = base_addr.reference_variable_offset
+
+                if base_addr is None and offset is None:
                     # this is a local variable
                     self._link_variables_on_expr(variable_manager, global_variables, block, stmt_idx, stmt, expr.addr)
                     if 'reference_variable' in expr.addr.tags and expr.addr.reference_variable is not None:
@@ -841,11 +861,21 @@ class Clinic(Analysis):
 
         elif isinstance(expr, ailment.Expr.Const):
             # global variable?
-            variables = global_variables.get_global_variables(expr.value)
-            if variables:
-                var = next(iter(variables))
-                expr.tags['reference_variable'] = var
-                expr.tags['reference_variable_offset'] = None
+            global_vars = global_variables.get_global_variables(expr.value)
+            if not global_vars:
+                # detect if there is a related symbol
+                symbol = self.project.loader.find_symbol(expr.value)
+                if symbol is not None:
+                    # Create a new global variable if there isn't one already
+                    global_vars = global_variables.get_global_variables(symbol.rebased_addr)
+                    if not global_vars:
+                        global_var = SimMemoryVariable(symbol.rebased_addr, symbol.size, name=symbol.name)
+                        global_variables.add_variable('global', global_var.addr, global_var)
+                        global_vars = {global_var}
+            if global_vars:
+                global_var = next(iter(global_vars))
+                expr.tags['reference_variable'] = global_var
+                expr.tags['reference_variable_offset'] = 0
 
         elif isinstance(expr, ailment.Stmt.Call):
             self._link_variables_on_call(variable_manager, global_variables, block, stmt_idx, expr, is_expr=True)
@@ -884,6 +914,19 @@ class Clinic(Analysis):
         stmt = kwargs.pop('stmt')
         op_type = kwargs.pop('op_type')
         return isinstance(stmt, ailment.Stmt.Call) and op_type == OP_BEFORE
+
+    @staticmethod
+    def parse_variable_addr(addr: ailment.Expr.Expression) -> Optional[Tuple[Any,Any]]:
+        if isinstance(addr, ailment.Expr.Const):
+            return addr, 0
+        if isinstance(addr, ailment.Expr.BinaryOp):
+            if addr.op == "Add":
+                op0, op1 = addr.operands
+                if isinstance(op0, ailment.Expr.Const):
+                    return op0, op1
+                elif isinstance(op1, ailment.Expr.Const):
+                    return op1, op0
+        return None, None
 
 
 register_analysis(Clinic, 'Clinic')
