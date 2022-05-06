@@ -228,6 +228,7 @@ struct block_details_t {
 	int64_t block_trace_ind;
 	bool has_symbolic_exit;
 	std::vector<instr_details_t> symbolic_instrs;
+	std::unordered_map<address_t, uint64_t> symbolic_mem_deps;
 	bool vex_lift_failed;
 	// A pointer to VEX lift result is stored only to avoid lifting twice on ARM. All blocks are lifted on ARM to check
 	// if they end in syscall. Remove it after syscalls are correctly setup on ARM in native interface itself.
@@ -238,6 +239,7 @@ struct block_details_t {
 		block_size = 0;
 		block_trace_ind = -1;
 		has_symbolic_exit = false;
+		symbolic_mem_deps.clear();
 		symbolic_instrs.clear();
 		vex_lift_failed = false;
 		vex_lift_result = NULL;

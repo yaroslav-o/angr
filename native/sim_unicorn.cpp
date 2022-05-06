@@ -294,6 +294,17 @@ void State::commit() {
 		}
 		blocks_with_symbolic_instrs.emplace_back(curr_block_details);
 	}
+	if (curr_block_details.symbolic_mem_deps.size() > 0) {
+		for (auto &curr_elem: curr_block_details.symbolic_mem_deps) {
+			auto elem = symbolic_mem_deps.find(curr_elem.first);
+			if (elem == symbolic_mem_deps.end()) {
+				symbolic_mem_deps.emplace(curr_elem);
+			}
+			else if (elem->second < curr_elem.second) {
+				elem->second = curr_elem.second;
+			}
+		}
+	}
 	if (curr_block_details.block_addr == trace_last_block_addr) {
 		trace_last_block_curr_count += 1;
 	}
@@ -2122,7 +2133,13 @@ void State::propagate_taint_of_one_instr(address_t instr_addr, const instruction
 				if (mem_value.is_value_symbolic) {
 					auto elem = symbolic_mem_deps.find(mem_value.address);
 					if (elem == symbolic_mem_deps.end()) {
-						symbolic_mem_deps.emplace(mem_value.address, mem_value.size);
+						auto curr_block_elem = curr_block_details.symbolic_mem_deps.find(mem_value.address);
+						if (curr_block_elem == curr_block_details.symbolic_mem_deps.end()) {
+							curr_block_details.symbolic_mem_deps.emplace(mem_value.address, mem_value.size);
+						}
+						else if (curr_block_elem->second < mem_value.size) {
+							curr_block_elem->second = mem_value.size;
+						}
 					}
 					else if (elem->second < mem_value.size) {
 						elem->second = mem_value.size;
